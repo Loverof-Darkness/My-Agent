@@ -1,0 +1,11 @@
+# Ignore large model binaries
+models/
+*.gguf
+
+# Ignore compiled python and local caches
+__pycache__/
+*.py[cod]
+*$py.class
+runtime/__pycache__/
+.ipynb_checkpoints/
+.DS_Store
