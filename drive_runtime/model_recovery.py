@@ -1,4 +1,4 @@
-"""Fast Qwen model recovery for MyAgent-Coder.
+"""MYAGENT-CODER-DRIVE-RECOVERY-V2\nFast Qwen model recovery for MyAgent-Coder.
 
 Google Drive is the permanent master. /content is disposable runtime
 storage.
