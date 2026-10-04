@@ -24,10 +24,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
+      - name: Validate bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile colab_init.py bootstrap.py
 
       - name: Build static Pages site
         shell: bash
@@ -56,7 +62,7 @@ jobs:
           HTML
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
