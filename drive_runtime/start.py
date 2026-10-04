@@ -1,4 +1,4 @@
-"""Persistent MyAgent-Coder Colab launcher.
+"""MYAGENT-CODER-DRIVE-LAUNCHER-V2\nPersistent MyAgent-Coder Colab launcher.
 
 This launcher lives in Google Drive and is safe to execute with IPython
 %run from a Colab notebook. It reuses an already-loaded Qwen singleton,
