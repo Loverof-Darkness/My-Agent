@@ -47,12 +47,10 @@ except ImportError:
     print("✓ llama-cpp-python installed.")
 
 
-# 2. Execute the persistent model launcher
-if not START_SCRIPT.is_file():
-    raise FileNotFoundError(
-        f"MyAgent-Coder start.py not found: {START_SCRIPT}"
-    )
-
+# 2. Use the real Colab user namespace.
+# This is important because objects created by start.py and
+# agent_runtime.py must remain available to the notebook as ac(),
+# coder_agent, qwen2_coder, etc.
 from IPython import get_ipython
 
 ip = get_ipython()
@@ -62,18 +60,25 @@ if ip is None:
         "The MyAgent-Coder bootstrap must run inside a Colab/IPython kernel."
     )
 
+user_ns = ip.user_ns
+
+
+# 3. Execute the persistent model launcher IN the notebook namespace.
+if not START_SCRIPT.is_file():
+    raise FileNotFoundError(
+        f"MyAgent-Coder start.py not found: {START_SCRIPT}"
+    )
+
 print("Loading/reusing persistent model launcher...")
-ip.run_line_magic("run", str(START_SCRIPT))
+ip.run_line_magic("run", f"-i {START_SCRIPT}")
 
 
-# 3. Locate the already-loaded Qwen singleton
-namespace = globals()
-
+# 4. Locate the already-loaded Qwen singleton.
 MODEL = (
-    namespace.get("qwen2_coder")
-    or namespace.get("qwen_coder")
-    or namespace.get("model")
-    or namespace.get("llm")
+    user_ns.get("qwen2_coder")
+    or user_ns.get("qwen_coder")
+    or user_ns.get("model")
+    or user_ns.get("llm")
 )
 
 if MODEL is None:
@@ -86,56 +91,60 @@ print("✓ Existing Qwen model found.")
 print(f"  Type: {type(MODEL).__name__}")
 
 
-# 4. Inject compatibility dependencies before loading agent_runtime.py
+# 5. Provide compatibility globals BEFORE loading the runtime.
 # Older Drive runtime copies may refer to time without importing it.
-# The runtime inference backend also expects QWEN to point to the model.
-namespace["time"] = time
-namespace["QWEN"] = MODEL
-namespace["qwen2_coder"] = MODEL
-namespace["qwen_coder"] = MODEL
+# The runtime inference backend expects QWEN to point at the singleton.
+user_ns["time"] = time
+user_ns["QWEN"] = MODEL
+user_ns["qwen2_coder"] = MODEL
+user_ns["qwen_coder"] = MODEL
 
 
-# 5. Load the persistent agent runtime in the same namespace
+# 6. Execute the agent runtime IN the same notebook namespace.
+# Using -i makes runtime function globals resolve against the same
+# namespace where QWEN/time and the loaded model already exist.
 if not RUNTIME_SCRIPT.is_file():
     raise FileNotFoundError(
         f"MyAgent-Coder agent runtime not found: {RUNTIME_SCRIPT}"
     )
 
 print("Loading persistent agent runtime...")
-ip.run_line_magic("run", str(RUNTIME_SCRIPT))
+ip.run_line_magic("run", f"-i {RUNTIME_SCRIPT}")
 
-namespace["time"] = time
-namespace["QWEN"] = MODEL
-namespace["qwen2_coder"] = MODEL
-namespace["qwen_coder"] = MODEL
+# Reassert canonical singleton references after runtime startup.
+user_ns["time"] = time
+user_ns["QWEN"] = MODEL
+user_ns["qwen2_coder"] = MODEL
+user_ns["qwen_coder"] = MODEL
 
 
-# 6. Select the unified public entry point
-router = namespace.get("routed_coder_agent")
+# 7. Select the unified public entry point.
+router = user_ns.get("routed_coder_agent")
 
 if callable(router):
-    namespace["ac"] = router
-    namespace["coder_agent"] = router
+    # Automatic CHAT <-> CODING routing.
+    user_ns["ac"] = router
+    user_ns["coder_agent"] = router
     public_mode = "automatic CHAT <-> CODING router"
 else:
-    coding_agent = namespace.get("coder_agent_persistent")
+    coding_agent = user_ns.get("coder_agent_persistent")
     if not callable(coding_agent):
-        coding_agent = namespace.get("coder_agent")
+        coding_agent = user_ns.get("coder_agent")
 
     if not callable(coding_agent):
         raise RuntimeError(
             "Agent runtime loaded, but no supported agent entry point was found."
         )
 
-    namespace["ac"] = coding_agent
-    namespace["coder_agent"] = coding_agent
+    user_ns["ac"] = coding_agent
+    user_ns["coder_agent"] = coding_agent
     public_mode = "coding agent only (router unavailable in Drive runtime)"
 
 
-# 7. Optional Agent class
+# 8. Optional Agent class
 agent_status = (
     "Agent exported"
-    if callable(namespace.get("Agent"))
+    if callable(user_ns.get("Agent"))
     else "Agent class not defined by runtime"
 )
 
