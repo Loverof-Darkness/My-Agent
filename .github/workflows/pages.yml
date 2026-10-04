@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile colab_init.py bootstrap.py
+          python -m py_compile colab_init.py bootstrap.py drive_runtime/start.py drive_runtime/model_recovery.py
 
       - name: Build static Pages site
         shell: bash
@@ -43,6 +43,9 @@ jobs:
           mkdir -p _site
 
           cp colab_init.py _site/colab_init.py
+          mkdir -p _site/drive_runtime
+          cp drive_runtime/start.py _site/drive_runtime/start.py
+          cp drive_runtime/model_recovery.py _site/drive_runtime/model_recovery.py
 
           cat > _site/index.html <<'HTML'
           <!doctype html>
